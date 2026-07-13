@@ -1,0 +1,6 @@
+{
+  "name": "AI Essentials Portfolio",
+  "description": "Interactive AI-powered personal portfolio for Pulidevan Prabakaran.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
