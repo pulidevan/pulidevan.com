@@ -144,6 +144,50 @@ body{margin:0;background:var(--sky-mid);color:var(--ink);font-family:var(--f-dis
 .btn:hover{background:var(--signal)}
 .btn.signal{background:var(--signal);color:#fff;white-space:nowrap}
 .btn.signal:hover{background:var(--signal-deep)}
+
+/* turn-chips: chips emitted directly by AI */
+.turn-chips{display:flex;flex-wrap:wrap;gap:6px;margin:3px 0 6px;animation:pop .3s cubic-bezier(.2,.8,.2,1) both}
+.chip-btn{font:500 13px/1.25 var(--f-display);color:var(--ink);background:rgba(255,255,255,.92);border:1px solid rgba(15,42,51,.18);
+  padding:7px 13px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;transition:all .2s;box-shadow:0 1px 3px rgba(15,42,51,.06)}
+.chip-btn:hover:not(:disabled){background:var(--ink);color:#fff;border-color:var(--ink);transform:translateY(-1px)}
+.chip-btn:disabled{opacity:.4;cursor:default}
+
+/* offer dual cards */
+.offer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;animation:pop .4s cubic-bezier(.2,.8,.2,1) both}
+.offer-card{background:rgba(255,255,255,.95);border:1px solid rgba(15,42,51,.14);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;box-shadow:0 4px 14px rgba(15,42,51,.06)}
+.offer-card.free{border-color:rgba(47,191,113,.35);background:linear-gradient(145deg,#fff,#f3faf7)}
+.offer-card.priority{border-color:rgba(255,90,31,.35);background:linear-gradient(145deg,#fff,#fff4ec);box-shadow:0 6px 18px -4px rgba(255,90,31,.18)}
+.offer-badge-wrap{margin-bottom:2px}
+.badge-team{font:600 9px/1.2 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:#1e7e4c;background:rgba(47,191,113,.15);padding:3px 7px;border-radius:999px;display:inline-block}
+.badge-founder{font:600 9px/1.2 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--signal-deep);background:rgba(255,90,31,.15);padding:3px 7px;border-radius:999px;display:inline-block}
+.badge-ok{font:600 10px/1.2 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:#1e7e4c;background:rgba(47,191,113,.15);padding:4px 9px;border-radius:999px;display:inline-block;margin-bottom:6px}
+.offer-card strong{font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.2}
+.offer-desc{font-size:12px;line-height:1.35;color:var(--ink);opacity:.8;margin:0;flex:1}
+.offer-price-row{display:flex;align-items:baseline;gap:6px;margin:4px 0 2px}
+.free-tag{font-size:22px;font-weight:800;color:#1e7e4c}
+.paid-tag{font-size:22px;font-weight:800;color:var(--signal-deep)}
+.was-tag{font:400 12px/1 var(--f-mono);opacity:.5}
+.price-sub{font:500 10px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;opacity:.6}
+.btn.full{width:100%;justify-content:center;box-sizing:border-box;font-size:10px;padding:9px 10px}
+
+/* inline pre-consult form */
+.offer-form-box{background:#fff;border:1.5px solid var(--signal);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;animation:pop .4s cubic-bezier(.2,.8,.2,1) both}
+.offer-form-head strong{display:block;font-size:15px;font-weight:700;margin-top:4px}
+.offer-form-head p{font-size:12px;line-height:1.35;opacity:.75;margin:2px 0 0}
+.lead-form{display:flex;flex-direction:column;gap:8px}
+.form-row{display:flex;flex-direction:column;gap:3px}
+.form-row label{font:500 10px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink);opacity:.7}
+.form-row input{background:rgba(15,42,51,.04);border:1px solid rgba(15,42,51,.15);border-radius:8px;padding:8px 10px;font:400 13px/1.3 var(--f-display);color:var(--ink);outline:0}
+.form-row input:focus{border-color:var(--signal);background:#fff}
+.form-error{color:#d32f2f;font-size:12px;margin:2px 0}
+.form-buttons{display:flex;gap:8px;align-items:center;margin-top:4px}
+.offer-done-box{background:linear-gradient(145deg,#fff,#f2faf6);border:1.5px solid #2fbf71;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;animation:pop .4s cubic-bezier(.2,.8,.2,1) both}
+.offer-done-box strong{font-size:15px;font-weight:700}
+.offer-done-box p{font-size:13px;line-height:1.4;margin:0;opacity:.85}
+
+@media (max-width:820px){
+  .offer-grid{grid-template-columns:1fr}
+}
 @media (max-width:820px){
   .bottom{grid-template-columns:minmax(0,1fr);gap:12px}
   /* phones: the deck shrinks to a mute pill top right; the player stays loaded (not display:none) so music keeps playing */

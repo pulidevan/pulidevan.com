@@ -15,14 +15,18 @@ export const profile = {
   coords: "13.08°N 80.27°E"
 };
 
-/** The ₹999 call. Booking happens entirely on Razorpay: the site itself collects no personal data. */
+/** The two consultation offerings: Free Team Pre-Consultation or Priority 1:1 with Pulidevan Prabakaran */
 export const offer = {
-  title: "1:1 discovery call",
+  title: "1:1 with Pulidevan",
   with: "With Pulidevan Prabakaran",
   price: "₹999",
   was: "₹2,029",
-  cta: "Book on Razorpay · ₹999",
-  payUrl: "https://rzp.io/rzp/frjnjJz"
+  cta: "Book Founder 1:1 · ₹999",
+  payUrl: "https://rzp.io/rzp/frjnjJz",
+  teamTitle: "Free Pre-Consultation",
+  teamWith: "With Pulidevan's Team",
+  teamDesc: "Our team will consult you on your requirement and recommend the right AI solution.",
+  teamCta: "Request Free Pre-Consultation"
 };
 
 /**
@@ -33,8 +37,8 @@ export const assistant = {
   label: "AI clone · second brain",
   greeting: ["Hey, I'm Pulidevan Prabakaran. Well, my AI clone 🤌🏼", "Ask me anything about AI, brands or what you're building."],
   prompts: ["Who are you?", "Show me AI videos", "Is this for someone like me?"],
-  bookChip: "Book a call · ₹999",
-  bookReply: "Let's get on a call. ₹999, and we map exactly where AI fits in your work.",
+  bookChip: "Book Consultation",
+  bookReply: "Two ways to work with me: start with a free team pre-consultation, or get priority direct access with me for ₹999. Pick what suits you best 👇",
   headAsk: "Who are you?",                     // clicking the 3D head asks this
   placeholder: "Ask me anything…",
   paid: "Payment done? Lovely 🔥 I'll reach out on the WhatsApp or email you paid with. Talk soon."

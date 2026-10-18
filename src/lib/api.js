@@ -42,6 +42,10 @@ export async function streamChat(messages, onText) {
   return text;
 }
 
+export function submitLead(data) {
+  return post("lead.php", data);
+}
+
 /* admin */
 export const admin = {
   sendCode: (email) => post("admin.php?action=send-code", { email }),

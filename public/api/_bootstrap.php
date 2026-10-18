@@ -36,7 +36,13 @@ function cfg(string $key, $default = null) {
 
 function data_dir(): string {
     $dir = cfg('DATA_DIR', dirname(__DIR__, PP_ROOT_UP) . '/pp-data');
-    if (!is_dir($dir)) { mkdir($dir, 0700, true); }
+    if (!is_dir($dir)) {
+        if (!@mkdir($dir, 0700, true)) {
+            $fallback = __DIR__ . '/_data';
+            if (!is_dir($fallback)) { @mkdir($fallback, 0700, true); }
+            return $fallback;
+        }
+    }
     return $dir;
 }
 

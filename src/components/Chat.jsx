@@ -1,19 +1,44 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { assistant as A, offer, films } from "../content.js";
-import { streamChat } from "../lib/api.js";
+import { streamChat, submitLead } from "../lib/api.js";
 
-// tags the AI puts at the end of a reply to show a card (see public/api/_brand.php)
-const TAGS = /<(book|videos)\s*\/?>/gi;
-const cardsIn = (t) => [...t.matchAll(TAGS)].map((m) => m[1].toLowerCase());
-const shown = (t) => t.replace(TAGS, "").replace(/<[a-z/]*$/i, "").trim();   // hide tags, even half-streamed
+// Tags the AI puts in reply: <offer/> or <book/> for consultation, <videos/> for film reel
+const TAGS = /<(book|offer|videos)\s*\/?>/gi;
+
+function parseCards(t) {
+  const cards = [];
+  if (/<(book|offer)\s*\/?>/i.test(t)) cards.push("offer");
+  if (/<videos\s*\/?>/i.test(t)) cards.push("videos");
+  return cards;
+}
+
+function parseChips(t) {
+  const m = t.match(/<chips>([\s\S]*?)<\/chips>/i);
+  if (!m) return [];
+  return m[1]
+    .split("|")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+// Clean text for speech bubble: strips chips (even while streaming) and card tags
+function cleanText(t) {
+  return t
+    .replace(/<chips>[\s\S]*?<\/chips>/gi, "") // strip closed chips
+    .replace(/<chips[\s\S]*$/i, "")            // strip open/half-streamed chips
+    .replace(TAGS, "")                         // strip cards
+    .replace(/<[a-z/]*$/i, "")                 // strip trailing partial tag
+    .trim();
+}
+
 let uid = 0;
-const msg = (role, text, cards = []) => ({ id: ++uid, role, text, cards });
+const msg = (role, text, cards = [], chips = []) => ({ id: ++uid, role, text, cards, chips });
 const HEAD = import.meta.env.BASE_URL + "assets/head.webp";
 
 /**
  * The AI clone: Pulidevan Prabakaran's second brain, streamed from /api/chat.php (Gemini).
- * Nothing the visitor types is stored. Booking goes straight to Razorpay; Razorpay sends payers back to /?paid=1.
+ * Free pre-consultation goes to SQLite /admin; Priority direct founder call goes to Razorpay (₹999).
  */
 export default function Chat() {
   const [msgs, setMsgs] = useState(() => A.greeting.map((t) => msg("model", t)));
@@ -24,7 +49,10 @@ export default function Chat() {
   msgsRef.current = msgs;
 
   // keep the newest message in view
-  useEffect(() => { const el = logRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs, busy]);
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [msgs, busy]);
 
   const ask = useCallback(async (q) => {
     q = q.trim();
@@ -37,16 +65,30 @@ export default function Chat() {
     setBusy(true);
     let final;
     try {
-      final = await streamChat(convo, (t) => setMsgs((m) => m.map((x) => (x.id === reply.id ? { ...x, text: t } : x))));
+      final = await streamChat(convo, (t) => {
+        setMsgs((m) =>
+          m.map((x) =>
+            x.id === reply.id
+              ? { ...x, text: t, cards: parseCards(t), chips: parseChips(t) }
+              : x
+          )
+        );
+      });
     } catch (e) {
       final = e.message;
     }
-    setMsgs((m) => m.map((x) => (x.id === reply.id ? { ...x, text: final, cards: cardsIn(final) } : x)));
+    setMsgs((m) =>
+      m.map((x) =>
+        x.id === reply.id
+          ? { ...x, text: final, cards: parseCards(final), chips: parseChips(final) }
+          : x
+      )
+    );
     setBusy(false);
   }, [busy]);
 
   const book = useCallback(() => {
-    setMsgs((m) => [...m, msg("user", A.bookChip), msg("model", A.bookReply, ["book"])]);
+    setMsgs((m) => [...m, msg("user", A.bookChip), msg("model", A.bookReply, ["offer"])]);
   }, []);
 
   // the 3D head asks a question
@@ -76,13 +118,37 @@ export default function Chat() {
 
       <div className="log" role="log" aria-live="polite" ref={logRef}>
         {msgs.map((m) => {
-          const t = m.role === "model" ? shown(m.text) : m.text;
-          if (m.role === "model" && !t && !m.cards.length) return <p className="bubble typing" key={m.id} aria-label="Typing"><i></i><i></i><i></i></p>;
+          const t = m.role === "model" ? cleanText(m.text) : m.text;
+          const showTyping = m.role === "model" && !t && !m.cards.length;
           return (
             <div className="turn" key={m.id}>
+              {showTyping && (
+                <p className="bubble typing" aria-label="Typing">
+                  <i></i><i></i><i></i>
+                </p>
+              )}
               {t && <p className={"bubble" + (m.role === "user" ? " me" : "")}>{t}</p>}
+              
+              {/* Interactive suggestion chips emitted by AI */}
+              {m.role === "model" && m.chips && m.chips.length > 0 && (
+                <div className="turn-chips" aria-label="Suggested replies">
+                  {m.chips.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      className="chip-btn"
+                      onClick={() => ask(chip)}
+                      disabled={busy}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {m.cards.includes("videos") && <Films />}
-              {m.cards.includes("book") && <BookCard />}
+              {(m.cards.includes("offer") || m.cards.includes("book")) && (
+                <OfferCard convo={msgs} onBooked={() => {}} />
+              )}
             </div>
           );
         })}
@@ -101,15 +167,159 @@ export default function Chat() {
   );
 }
 
-function BookCard() {
-  return (
-    <div className="offer">
-      <div>
-        <small>{offer.with}</small>
-        <strong>{offer.title}</strong>
-        <div className="price"><b>{offer.price}</b><s aria-label={`was ${offer.was}`}>{offer.was}</s></div>
+/**
+ * OfferCard: Two clear paths
+ * 1. Free Pre-Consultation (Team Strategy Call) -> logs to SQLite leads table in /admin.html
+ * 2. Priority Direct Access with Founder (₹999 on Razorpay) -> captured by Razorpay webhook
+ */
+function OfferCard({ convo = [], onBooked }) {
+  const [mode, setMode] = useState("choose"); // "choose" | "free" | "done"
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [need, setNeed] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleFreeSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+    const clean = phone.replace(/\D/g, "");
+    if (clean.length < 10) {
+      setError("Please enter a valid 10-digit WhatsApp/phone number.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await submitLead({
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        need: need.trim() || "Free Pre-Consultation requested via chat",
+        transcript: convo.map(({ role, text }) => ({ role, text }))
+      });
+      setMode("done");
+      onBooked?.();
+    } catch (err) {
+      setError(err.message || "Failed to submit. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (mode === "done") {
+    return (
+      <div className="offer-done-box">
+        <span className="badge-ok">✓ Pre-Consultation Booked</span>
+        <strong>We've got your requirement, {name.trim().split(" ")[0]}!</strong>
+        <p>Pulidevan's team will review your brief and reach out to you on WhatsApp (<b>{phone}</b>) within 24 hours.</p>
       </div>
-      <a className="btn signal" href={offer.payUrl} rel="noopener">{offer.cta} ↗</a>
+    );
+  }
+
+  if (mode === "free") {
+    return (
+      <div className="offer-form-box">
+        <div className="offer-form-head">
+          <span className="badge-team">Team Pre-Consultation · Free</span>
+          <strong>Tell us about your requirement</strong>
+          <p>Pulidevan's team will consult you on your business needs and suggest the best AI blueprint.</p>
+        </div>
+        <form className="lead-form" onSubmit={handleFreeSubmit}>
+          <div className="form-row">
+            <label>Name</label>
+            <input
+              type="text"
+              required
+              placeholder="Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={busy}
+              autoFocus
+            />
+          </div>
+          <div className="form-row">
+            <label>WhatsApp / Phone</label>
+            <input
+              type="tel"
+              required
+              placeholder="e.g. 98765 43210"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              disabled={busy}
+            />
+          </div>
+          <div className="form-row">
+            <label>Email <small>(optional)</small></label>
+            <input
+              type="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={busy}
+            />
+          </div>
+          <div className="form-row">
+            <label>Requirement / Goal</label>
+            <input
+              type="text"
+              placeholder="e.g. AI video ads, automating operations, training..."
+              value={need}
+              onChange={(e) => setNeed(e.target.value)}
+              disabled={busy}
+            />
+          </div>
+          {error && <p className="form-error">{error}</p>}
+          <div className="form-buttons">
+            <button type="submit" className="btn signal" disabled={busy}>
+              {busy ? "Booking…" : "Confirm Free Pre-Consultation"}
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setMode("choose")} disabled={busy}>
+              Back
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="offer-grid">
+      {/* 1. Free Pre-Consultation (Team Strategy Call) */}
+      <div className="offer-card free">
+        <div className="offer-badge-wrap">
+          <span className="badge-team">Free Strategy Call</span>
+        </div>
+        <strong>Team Pre-Consultation</strong>
+        <p className="offer-desc">Our team will consult you regarding your requirement and find your quick AI wins.</p>
+        <div className="offer-price-row">
+          <b className="free-tag">₹0</b>
+          <span className="price-sub">Free exploration</span>
+        </div>
+        <button type="button" className="btn ghost full" onClick={() => setMode("free")}>
+          Request Free Pre-Consultation →
+        </button>
+      </div>
+
+      {/* 2. Priority Direct Access with Founder (₹999) */}
+      <div className="offer-card priority">
+        <div className="offer-badge-wrap">
+          <span className="badge-founder">Priority Access · Founder 1:1</span>
+        </div>
+        <strong>1:1 with Pulidevan Prabakaran</strong>
+        <p className="offer-desc">Skip the queue. Direct 1:1 strategy session with the founder to map your AI leverage.</p>
+        <div className="offer-price-row">
+          <b className="paid-tag">{offer.price}</b>
+          <s className="was-tag">{offer.was}</s>
+        </div>
+        <a className="btn signal full" href={offer.payUrl} target="_blank" rel="noopener">
+          {offer.cta} ↗
+        </a>
+      </div>
     </div>
   );
 }
@@ -161,7 +371,6 @@ function Viewer({ i, onClose, onGo }) {
     else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();     // iPhone Safari
   };
 
-  // rendered on <body>: the chat card's backdrop-filter would otherwise trap position:fixed inside it
   return createPortal(
     <div className="viewer" role="dialog" aria-modal="true" aria-label={f.title} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="viewer-box" ref={box}>

@@ -50,8 +50,8 @@ function brand_fallback(string $q): string {
     $has = fn(array $words) => (bool) array_filter($words, fn($w) => str_contains($q, $w));
     if ($has(['video', 'film', 'tvc', 'ads', 'reel', 'commercial', 'show me', 'example']))
         return "AI video that doesn't look like AI slop, that's my thing. Here's what my students made 👇 <videos/><chips>Can I make these? | How long to learn? | Talk to your team</chips>";
-    if ($has(['book', 'price', 'cost', 'fees', 'call', 'consult', 'talk', 'meet', '999', 'pay', 'join', 'hire', 'team']))
-        return "Two ways: a free strategy call with my team, or a 1:1 deep dive with me for ₹999. If you're exploring, start free. <offer/><chips>Free call works | I want you directly | What happens on the call?</chips>";
+    if ($has(['free', 'book', 'price', 'cost', 'fees', 'call', 'consult', 'talk', 'meet', '999', 'pay', 'join', 'hire', 'team']))
+        return "Two ways: a free pre-consultation with my team, or a 1:1 deep dive with me for ₹999. If you're exploring, start with our team. <offer/><chips>Free call works | I want you directly | What happens on the call?</chips>";
     if ($has(['who', 'pulidevan', 'founder', 'about you', 'yourself', 'real', 'bot', 'human']))
         return "I'm Pulidevan Prabakaran, founder of AI Essentials, well, my AI clone 🤌🏼 8,000+ people trained so far. What are you working on?<chips>I run a business | I'm a marketer | I want to learn AI</chips>";
     if ($has(['business', 'shop', 'customers', 'sales', 'brand', 'startup', 'company']))

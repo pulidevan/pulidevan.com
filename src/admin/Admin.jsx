@@ -4,9 +4,10 @@ import { admin } from "../lib/api.js";
 const ADMIN = "pulidevan3@gmail.com";
 // the site collects nothing itself: everyone here paid on Razorpay (pulled in by Sync or the webhook)
 const TABS = [
-  ["paid", "To contact"],
-  ["contacted", "Contacted"],
-  ["all", "All"]
+  ["all", "All"],
+  ["pending", "Pre-Consults (Free)"],
+  ["paid", "Paid (₹999)"],
+  ["contacted", "Contacted"]
 ];
 const when = (s) => (s ? new Date(s * 1000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "");
 const wa = (phone) => `https://wa.me/${phone.length === 10 ? "91" + phone : phone}`;
@@ -49,7 +50,7 @@ function SignIn({ onIn }) {
 }
 
 function Dashboard({ me, onOut }) {
-  const [tab, setTab] = useState("paid");
+  const [tab, setTab] = useState("all");
   const [data, setData] = useState({ leads: [], counts: {} });
   const [open, setOpen] = useState(null);
   const [msg, setMsg] = useState("");
@@ -70,7 +71,7 @@ function Dashboard({ me, onOut }) {
   return (
     <main className="dash">
       <header className="bar">
-        <div><span className="dot"></span><strong>Bookings</strong><small>{me.email}</small></div>
+        <div><span className="dot"></span><strong>Bookings & Leads</strong><small>{me.email}</small></div>
         <div className="actions">
           <button className="btn ghost" onClick={sync} disabled={busy || !me.razorpay} title={me.razorpay ? "Pull captured payments from Razorpay and match them" : "Add Razorpay API keys first"}>{busy ? "Syncing…" : "↻ Sync payments"}</button>
           <a className="btn ghost" href={admin.exportUrl()}>⤓ Export CSV</a>
@@ -94,7 +95,9 @@ function Dashboard({ me, onOut }) {
             <button className="row" onClick={() => setOpen(open === l.id ? null : l.id)} aria-expanded={open === l.id}>
               <span className="who"><strong>{l.name}</strong><small>{when(l.paid_at || l.created_at)}</small></span>
               <span className="need">{l.need || <i className="muted">No details</i>}</span>
-              <span className={"pill " + (l.paid_verified ? "paid" : l.status)}>{l.paid_verified ? `Paid ₹${(l.amount || 0) / 100}` : l.status === "returned" ? "Back from payment" : l.status}</span>
+              <span className={"pill " + (l.paid_verified ? "paid" : l.status)}>
+                {l.paid_verified ? `Paid ₹${(l.amount || 0) / 100}` : l.status === "pending" ? "Pre-Consult (Free)" : l.status === "returned" ? "Back from payment" : l.status}
+              </span>
             </button>
             {open === l.id && (
               <div className="detail">
@@ -103,11 +106,13 @@ function Dashboard({ me, onOut }) {
                   {l.email && <a className="btn ghost" href={`mailto:${l.email}`}>{l.email}</a>}
                   {l.status !== "contacted"
                     ? <button className="btn ghost" onClick={() => setStatus(l, "contacted")}>✓ Mark contacted</button>
-                    : <button className="btn ghost" onClick={() => setStatus(l, l.paid_verified ? "paid" : "returned")}>Undo contacted</button>}
+                    : <button className="btn ghost" onClick={() => setStatus(l, l.paid_verified ? "paid" : "pending")}>Undo contacted</button>}
                 </div>
                 <dl>
-                  <dt>Payment</dt><dd>{l.payment_id ? <code>{l.payment_id}</code> : "Not confirmed"} {l.paid_verified ? "· verified with Razorpay" : ""}</dd>
-                  <dt>Paid</dt><dd>{when(l.paid_at || l.created_at)}</dd>
+                  <dt>Consultation</dt><dd>{l.paid_verified ? "Priority 1:1 with Pulidevan Prabakaran (Paid ₹999)" : "Free Pre-Consultation (Team Consultation)"}</dd>
+                  <dt>Status</dt><dd>{l.status}</dd>
+                  <dt>Payment</dt><dd>{l.payment_id ? <code>{l.payment_id}</code> : "Free pre-consultation / No payment required"} {l.paid_verified ? "· verified with Razorpay" : ""}</dd>
+                  <dt>Date</dt><dd>{when(l.paid_at || l.created_at)}</dd>
                 </dl>
                 <Notes lead={l} onSave={(n) => setStatus(l, l.status, n)} />
                 {l.transcript?.length > 0 && (
