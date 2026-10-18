@@ -6,7 +6,7 @@ const readMuted = () => { try { return localStorage.getItem(MUTE_KEY) === "1"; }
 const saveMuted = (m) => { try { localStorage.setItem(MUTE_KEY, m ? "1" : "0"); } catch (e) { /* storage blocked */ } };
 
 // SoundCloud widget, stripped of everything visible: the iframe sits off-screen and our own card is the UI.
-const SC_OPTS = { auto_play: false, visual: false, show_artwork: false, show_comments: false, show_user: false, show_reposts: false,
+const SC_OPTS = { auto_play: true, visual: false, show_artwork: false, show_comments: false, show_user: false, show_reposts: false,
   show_teaser: false, hide_related: true, buying: false, sharing: false, download: false, show_playcount: false, single_active: true };
 const scSrc = (url) => "https://w.soundcloud.com/player/?" + new URLSearchParams({ url, ...Object.fromEntries(Object.entries(SC_OPTS).map(([k, v]) => [k, String(v)])) });
 
@@ -23,7 +23,7 @@ function loadScApi() {
 /**
  * Music card under the 3D record crate. Each record is a SoundCloud artist or playlist.
  * Autoplay: tries as soon as the player is ready; browsers block sound until the visitor interacts,
- * so it also starts on the first click, tap or key press anywhere — unless they muted.
+ * so it also starts on any click, tap, scroll or key press anywhere — unless explicitly paused.
  * Mute sets the volume to 0 (the music keeps its place) and is remembered. Pause stops it.
  * Each new track starts SKIP_MS in, past the quiet intro, so sound arrives right away.
  * Other parts of the page can pause/resume it with the "pp-music" event (detail: "pause" | "resume"),
@@ -37,15 +37,15 @@ export default function Deck({ onSelect }) {
   const [track, setTrack] = useState("");
   const [playing, setPlaying] = useState(false);
   const userPaused = useRef(false), soundId = useRef(null);
-  const frame = useRef(null), widget = useRef(null), started = useRef(false), iRef = useRef(i), mutedRef = useRef(muted);
+  const frame = useRef(null), widget = useRef(null), iRef = useRef(i), mutedRef = useRef(muted);
   iRef.current = i; mutedRef.current = muted;
 
   useEffect(() => { onSelect?.(i); }, [i, onSelect]);
 
   const play = useCallback(() => {
-    const w = widget.current; if (!w) return;
+    const w = widget.current; if (!w || userPaused.current) return;
     w.setVolume(mutedRef.current ? 0 : 70);
-    if (!mutedRef.current) w.play();
+    w.play();
   }, []);
 
   useEffect(() => {
@@ -54,7 +54,9 @@ export default function Deck({ onSelect }) {
       if (!alive || !frame.current) return;
       const w = SC.Widget(frame.current); widget.current = w;
       const E = SC.Widget.Events;
-      w.bind(E.READY, () => play());                 // autoplay attempt; works where the browser allows it
+      w.bind(E.READY, () => {
+        if (!userPaused.current) play();
+      });
       w.bind(E.PLAY, () => {
         setPlaying(true);
         w.getCurrentSound((s) => {
@@ -69,20 +71,29 @@ export default function Deck({ onSelect }) {
       w.bind(E.PAUSE, () => setPlaying(false));
       w.bind(E.FINISH, () => w.next());
     }).catch(() => setTrack("Music unavailable"));
-    const first = (e) => {
-      if (started.current || !widget.current) return;
-      started.current = true;
-      if (!e.target.closest?.(".mute,.play")) play();   // pressing mute/pause first shouldn't start the music
-      off();
+
+    // Autoplay trigger on any user gesture across all mobile and desktop devices
+    const tryAutoplay = (e) => {
+      if (userPaused.current) return;
+      if (e?.target?.closest?.(".play,.mute")) return;
+      const w = widget.current;
+      if (w) {
+        w.isPaused((p) => {
+          if (p && !userPaused.current) play();
+        });
+      }
     };
-    const evs = ["pointerdown", "keydown", "touchstart"];
-    const off = () => evs.forEach((t) => removeEventListener(t, first));
-    evs.forEach((t) => addEventListener(t, first));
-    return () => { alive = false; off(); };
+
+    const evs = ["pointerdown", "touchstart", "touchend", "click", "keydown", "scroll"];
+    evs.forEach((t) => window.addEventListener(t, tryAutoplay, { passive: true }));
+    return () => {
+      alive = false;
+      evs.forEach((t) => window.removeEventListener(t, tryAutoplay));
+    };
   }, [play]);
 
   const choose = useCallback((n) => {
-    setI(n); setTrack(""); started.current = true; userPaused.current = false;
+    setI(n); setTrack(""); userPaused.current = false;
     if (mutedRef.current) { mutedRef.current = false; setMuted(false); saveMuted(false); }
     const w = widget.current;
     if (w) w.load(L[n].url, { ...SC_OPTS, auto_play: true, callback: () => play() });
@@ -93,7 +104,7 @@ export default function Deck({ onSelect }) {
     choose(n);
   }, [choose]);
   const toggleMute = useCallback(() => {
-    const m = !mutedRef.current; mutedRef.current = m; setMuted(m); saveMuted(m); started.current = true;
+    const m = !mutedRef.current; mutedRef.current = m; setMuted(m); saveMuted(m);
     const w = widget.current; if (!w) return;
     w.setVolume(m ? 0 : 70);
     if (!m) w.isPaused((p) => p && w.play());
@@ -101,11 +112,16 @@ export default function Deck({ onSelect }) {
 
   const togglePlay = useCallback(() => {
     const w = widget.current; if (!w) return;
-    started.current = true;
     w.isPaused((p) => {
-      userPaused.current = !p;
-      if (p) { if (mutedRef.current) { mutedRef.current = false; setMuted(false); saveMuted(false); } w.setVolume(70); w.play(); }
-      else w.pause();
+      if (p) {
+        userPaused.current = false;
+        if (mutedRef.current) { mutedRef.current = false; setMuted(false); saveMuted(false); }
+        w.setVolume(70);
+        w.play();
+      } else {
+        userPaused.current = true;
+        w.pause();
+      }
     });
   }, []);
 
@@ -136,7 +152,7 @@ export default function Deck({ onSelect }) {
   const p = L[i];
   return (
     <aside className="deck" aria-label="Studio crate">
-      <div className="deck-head"><span><span className={"eq" + (muted ? " off" : "")}><i></i><i></i><i></i></span>Studio crate · lofi</span><span>Pick a record ↑</span></div>
+      <div className="deck-head"><span><span className={"eq" + (muted || !playing ? " off" : "")}><i></i><i></i><i></i></span>Studio crate · lofi</span><span>Pick a record ↑</span></div>
       <div className="now">
         <div className="dot" style={{ background: p.color }}></div>
         <div className="now-t"><small>{muted ? "Muted" : !playing ? "Paused" : track || "Now spinning"}</small><strong>{p.name}</strong></div>
@@ -145,7 +161,7 @@ export default function Deck({ onSelect }) {
         <button className="btn ghost ic" onClick={shuffle} title="Shuffle (S)" aria-label="Shuffle">🔀</button>
       </div>
       {/* the actual player: loaded and audible, never seen */}
-      <iframe ref={frame} className="sc" title="Music player" src={src} allow="autoplay; encrypted-media" tabIndex={-1} aria-hidden="true"></iframe>
+      <iframe ref={frame} className="sc" title="Music player" src={src} allow="autoplay; encrypted-media; fullscreen" tabIndex={-1} aria-hidden="true"></iframe>
     </aside>
   );
 }
