@@ -1,39 +1,21 @@
 {
-  "name": "react-example",
+  "name": "pulidevan-prabakaran",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "start": "NODE_ENV=production tsx server.ts",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite --host",
     "build": "vite build",
-    "preview": "vite preview",
-    "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "preview": "vite preview --host"
   },
   "dependencies": {
-    "@elevenlabs/react": "^1.10.0",
-    "@google/genai": "^2.4.0",
-    "@tailwindcss/vite": "^4.1.14",
-    "@types/react": "^18.3.31",
-    "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react": "^5.0.4",
-    "dotenv": "^17.2.3",
-    "express": "^4.21.2",
-    "lucide-react": "^0.546.0",
-    "motion": "^12.23.24",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "vite": "^6.2.3"
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "three": "0.160.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.14.0",
-    "autoprefixer": "^10.4.21",
-    "esbuild": "^0.25.0",
-    "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "@vitejs/plugin-react": "4.3.4",
+    "vite": "5.4.11"
   }
 }

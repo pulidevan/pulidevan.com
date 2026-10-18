@@ -1,61 +1,36 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <script>
-      // Fix for "Uncaught TypeError: Cannot set property fetch of #<Window> which has only a getter"
-      // which happens when third-party scripts, browser extensions, or environment sandboxes
-      // attempt to stub/override window.fetch in a getter-only environment.
-      (function() {
-        try {
-          const originalFetch = window.fetch;
-          if (originalFetch) {
-            let currentFetch = originalFetch;
-            Object.defineProperty(window, 'fetch', {
-              get() {
-                return currentFetch;
-              },
-              set(val) {
-                currentFetch = val;
-              },
-              configurable: true,
-              enumerable: true
-            });
-          }
-        } catch (e) {
-          console.warn('Unable to patch window.fetch property:', e);
-        }
-      })();
-    </script>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    
-    <title>Pulidevan Prabakaran - Portfolio</title>
-    
-    <!-- PWA Meta Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#3b82f6" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.svg" />
-    
-    <!-- Splash Screen (Apple) -->
-    <link rel="apple-touch-startup-image" href="/icon-512.svg" />
-    
-  </head>
-  <body class="bg-zinc-50 dark:bg-zinc-950 overscroll-none">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for(let registration of registrations) {
-              registration.unregister();
-            }
-          });
-        });
-      }
-    </script>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Pulidevan Prabakaran · Founder, AI Essentials</title>
+  <meta name="description" content="Chat with the AI clone of Pulidevan Prabakaran, founder of AI Essentials in Chennai. 8,000+ people upskilled in AI. Book a 1:1 discovery call for ₹999.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23ff5a1f%27/%3E%3C/svg%3E">
+  <!-- warm up SoundCloud early so the first record starts fast -->
+  <link rel="preconnect" href="https://w.soundcloud.com">
+  <link rel="preconnect" href="https://api-widget.soundcloud.com">
+  <link rel="dns-prefetch" href="https://cf-hls-media.sndcdn.com">
+  <script id="sc-api" src="https://w.soundcloud.com/player/api.js" async></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Person","name":"Pulidevan Prabakaran",
+   "jobTitle":"Founder","worksFor":{"@type":"Organization","name":"AI Essentials"},
+   "address":{"@type":"PostalAddress","addressLocality":"Chennai","addressRegion":"Tamil Nadu","addressCountry":"IN"},
+   "url":"https://pulidevan.com","sameAs":["https://www.linkedin.com/in/pulidevan"],
+   "makesOffer":{"@type":"Offer","name":"1:1 discovery call","price":"999","priceCurrency":"INR","url":"https://rzp.io/rzp/frjnjJz"}}
+  </script>
+</head>
+<body>
+  <div id="stage">
+    <div id="bigtype" aria-hidden="true"><span><b>PULIDEVAN</b><b>PRABAKARAN</b></span></div>
+    <canvas id="gl" aria-label="Pulidevan Prabakaran's head, half skin and half liquid gold, floating above the clouds beside a crate of lofi records"></canvas>
+    <div id="vignette"></div>
+    <div id="grain"></div>
+  </div>
+  <div id="root"></div>
+  <div id="tip" aria-hidden="true"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
 </html>
-

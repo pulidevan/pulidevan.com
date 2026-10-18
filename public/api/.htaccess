@@ -1,0 +1,5 @@
+# Shared PHP includes (files starting with "_") are never served directly.
+<FilesMatch "^_">
+  Require all denied
+</FilesMatch>
+Options -Indexes

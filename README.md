@@ -1,20 +1,22 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Pulidevan Prabakaran
 
-# Run and deploy your AI Studio app
+A no-scroll, click-through conversation with Pulidevan Prabakaran, founder of AI Essentials. A floating half-gold head above the clouds, an AI clone that talks in his voice and books ₹999 calls through Razorpay, and a 3D crate of SoundCloud lofi records.
 
-This contains everything you need to run your app locally.
+```bash
+npm install
+npm run dev        # site on http://localhost:5173, dashboard on /admin.html (PHP + Vite)
+```
 
-View your app in AI Studio: https://ai.studio/apps/ed4d7b6a-effb-44a0-9f69-f33c81fbdce5
+- Site words: `src/content.js`. What the AI knows: `public/api/_brand.php`.
+- Secrets: `pp-config.php` in the project root (git-ignored). Agent instructions: `AGENTS.md`.
 
-## Run Locally
+## Deploy to Hostinger
 
-**Prerequisites:**  Node.js
+Live at https://pulidevan.com (account u666355642). To redeploy:
 
+1. `npm run build`, copy `dist/` somewhere temporary, add `api/_config.php` (see `AGENTS.md`), zip it.
+2. Hostinger API: `POST /api/hosting/v1/files/upload-urls` → TUS-upload the zip into public_html → `POST /api/hosting/v1/accounts/u666355642/websites/pulidevan.com/deploy` with `archive_path`. This replaces everything in public_html, so the zip must include `api/_config.php`.
+3. Razorpay → the ₹999 Payment Page → redirect after payment: `https://pulidevan.com/?paid=1`.
+4. To list payers in `/admin.html`: add Razorpay API keys to `api/_config.php` (and optionally a webhook to `https://pulidevan.com/api/razorpay-webhook.php`, event `payment.captured`).
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Stack: Vite 5 · React 18 · Three.js r160 · PHP 8 + SQLite · Gemini API · Razorpay · SoundCloud Widget API.
