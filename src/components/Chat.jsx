@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { assistant as A, offer, films } from "../content.js";
-import { streamChat, submitLead } from "../lib/api.js";
+import { streamChat, submitLead, getVoiceAudio } from "../lib/api.js";
 
 // Tags the AI puts in reply: <offer/> or <book/> for consultation, <videos/> for film reel
 const TAGS = /<(book|offer|videos)\s*\/?>/gi;
@@ -39,14 +39,80 @@ const HEAD = import.meta.env.BASE_URL + "assets/head.webp";
 /**
  * The AI clone: Pulidevan Prabakaran's second brain, streamed from /api/chat.php (Gemini).
  * Free pre-consultation goes to SQLite /admin; Priority direct founder call goes to Razorpay (₹999).
+ * Voice narration powered by Google Gemini 3.8 Flash TTS (/api/tts.php).
  */
 export default function Chat() {
   const [msgs, setMsgs] = useState(() => A.greeting.map((t) => msg("model", t)));
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState("");
   const [used, setUsed] = useState(() => new Set());
+  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem("pp_voice") !== "0");
+  const [playingMsgId, setPlayingMsgId] = useState(null);
+  const [audioLoadingId, setAudioLoadingId] = useState(null);
+
   const logRef = useRef(null), msgsRef = useRef(msgs);
   msgsRef.current = msgs;
+
+  const voiceEnabledRef = useRef(voiceEnabled);
+  voiceEnabledRef.current = voiceEnabled;
+
+  const currentAudioRef = useRef(null);
+
+  const stopAudio = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+    setPlayingMsgId(null);
+    setAudioLoadingId(null);
+  }, []);
+
+  const playAudioFor = useCallback(async (id, text) => {
+    if (!text) return;
+    stopAudio();
+    setAudioLoadingId(id);
+    try {
+      const audioUrl = await getVoiceAudio(text);
+      if (!audioUrl) {
+        setAudioLoadingId(null);
+        return;
+      }
+      const audio = new Audio(audioUrl);
+      currentAudioRef.current = audio;
+      setPlayingMsgId(id);
+      setAudioLoadingId(null);
+
+      audio.onended = () => {
+        setPlayingMsgId((curr) => (curr === id ? null : curr));
+        if (currentAudioRef.current === audio) currentAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        setPlayingMsgId((curr) => (curr === id ? null : curr));
+        setAudioLoadingId((curr) => (curr === id ? null : curr));
+        if (currentAudioRef.current === audio) currentAudioRef.current = null;
+      };
+      await audio.play();
+    } catch (err) {
+      console.warn("Audio playback error:", err);
+      setPlayingMsgId(null);
+      setAudioLoadingId(null);
+    }
+  }, [stopAudio]);
+
+  const toggleVoice = useCallback(() => {
+    setVoiceEnabled((v) => {
+      const next = !v;
+      localStorage.setItem("pp_voice", next ? "1" : "0");
+      if (!next) stopAudio();
+      return next;
+    });
+  }, [stopAudio]);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => stopAudio();
+  }, [stopAudio]);
 
   // keep the newest message in view
   useEffect(() => {
@@ -57,6 +123,7 @@ export default function Chat() {
   const ask = useCallback(async (q) => {
     q = q.trim();
     if (!q || busy) return;
+    stopAudio();
     setUsed((s) => new Set(s).add(q));
     setInput("");
     const convo = [...msgsRef.current.slice(A.greeting.length), msg("user", q)];
@@ -85,7 +152,13 @@ export default function Chat() {
       )
     );
     setBusy(false);
-  }, [busy]);
+
+    // Speak reply automatically if voice narration is active
+    if (voiceEnabledRef.current && final) {
+      const clean = cleanText(final);
+      if (clean) playAudioFor(reply.id, clean);
+    }
+  }, [busy, stopAudio, playAudioFor]);
 
   const book = useCallback(() => {
     setMsgs((m) => [...m, msg("user", A.bookChip), msg("model", A.bookReply, ["offer"])]);
@@ -113,6 +186,18 @@ export default function Chat() {
       <header className="chat-head">
         <span className="face" aria-hidden="true"><i style={{ backgroundImage: `url(${HEAD})` }}></i><img src={HEAD} alt="" /></span>
         <div><strong>Pulidevan Prabakaran</strong><small>{A.label}</small></div>
+        <button
+          type="button"
+          className={"voice-pill" + (voiceEnabled ? " active" : "")}
+          onClick={toggleVoice}
+          title={voiceEnabled ? "Mute AI voice narration" : "Enable AI voice narration (Gemini 3.8 Flash TTS)"}
+          aria-label={voiceEnabled ? "Voice narration active" : "Voice narration muted"}
+        >
+          <span className="v-wave" aria-hidden="true">
+            <i></i><i></i><i></i>
+          </span>
+          <span className="v-label">{voiceEnabled ? "Voice" : "Muted"}</span>
+        </button>
         <span className="live"><i></i>online</span>
       </header>
 
@@ -127,7 +212,37 @@ export default function Chat() {
                   <i></i><i></i><i></i>
                 </p>
               )}
-              {t && <p className={"bubble" + (m.role === "user" ? " me" : "")}>{t}</p>}
+              {t && (
+                m.role === "model" ? (
+                  <div className="bubble-row">
+                    <p className="bubble">{t}</p>
+                    <button
+                      type="button"
+                      className={"speak-btn" + (playingMsgId === m.id ? " playing" : "") + (audioLoadingId === m.id ? " loading" : "")}
+                      onClick={() => {
+                        if (playingMsgId === m.id) stopAudio();
+                        else playAudioFor(m.id, t);
+                      }}
+                      title={playingMsgId === m.id ? "Stop voice" : "Listen in Pulidevan's voice"}
+                      aria-label={playingMsgId === m.id ? "Stop reading" : "Read aloud with Google Gemini TTS"}
+                    >
+                      {audioLoadingId === m.id ? (
+                        <span className="mini-spin" aria-hidden="true" />
+                      ) : playingMsgId === m.id ? (
+                        <span className="mini-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="bubble me">{t}</p>
+                )
+              )}
               
               {/* Interactive suggestion chips emitted by AI */}
               {m.role === "model" && m.chips && m.chips.length > 0 && (

@@ -46,6 +46,20 @@ export function submitLead(data) {
   return post("lead.php", data);
 }
 
+/**
+ * Synthesizes realistic speech using Google Gemini 3.8 Flash TTS via /api/tts.php.
+ * Returns base64 audio data URL (data:audio/wav;base64,...) or null.
+ */
+export async function getVoiceAudio(text) {
+  try {
+    const res = await post("tts.php", { text });
+    return res?.audio || null;
+  } catch (err) {
+    console.warn("Gemini TTS unavailable:", err);
+    return null;
+  }
+}
+
 /* admin */
 export const admin = {
   sendCode: (email) => post("admin.php?action=send-code", { email }),

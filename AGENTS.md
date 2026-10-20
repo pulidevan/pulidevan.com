@@ -34,8 +34,8 @@ One fixed screen, never scrolls:
 |---|---|
 | `src/content.js` | **All site words.** Profile, the `assistant` (greeting, prompts, thank-you), the `offer` (price, Razorpay link), `films` and the SoundCloud `playlists`. |
 | `public/api/_brand.php` | **The clone's brain:** facts, his voice, the `<book/>`/`<videos/>` rules, and the keyword fallback used when Gemini is unavailable. |
-| `public/api/*.php` | Backend: `chat.php` (Gemini stream, nothing stored), `razorpay-webhook.php`, `admin.php` (sign-in + dashboard API). `_bootstrap.php` has config, the SQLite schema and payment matching. |
-| `src/components/Chat.jsx` | The AI clone chat, film reel and booking card. |
+| `public/api/*.php` | Backend: `chat.php` (Gemini stream, nothing stored), `tts.php` (Google Gemini 3.8 Flash TTS realistic speech), `razorpay-webhook.php`, `admin.php` (sign-in + dashboard API). `_bootstrap.php` has config, the SQLite schema and payment matching. |
+| `src/components/Chat.jsx` | The AI clone chat, film reel, booking card and realistic voice speech player. |
 | `src/lib/api.js` | Browser → backend calls (streaming chat, leads, admin). |
 | `admin.html`, `src/admin/` | The private dashboard. |
 | `scripts/dev.mjs` | Starts PHP + Vite together. |
